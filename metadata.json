@@ -1,0 +1,8 @@
+{
+  "name": "Remix OmniAgent",
+  "description": "An autonomous multi-modal AI copilot that transforms complex, unstructured data into automated, enterprise-grade technical workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
