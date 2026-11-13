@@ -31,6 +31,8 @@ export interface SessionSandbox {
 const sessions = new Map<string, SessionSandbox>();
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours inactivity TTL
 const MAX_ACTIVE_SESSIONS = 100;
+export const EMBED_MODEL =
+  process.env.GEMINI_EMBEDDING_MODEL?.trim() || 'text-embedding-004';
 
 function pruneExpiredSessions() {
   const now = Date.now();
@@ -175,7 +177,7 @@ export async function indexArtifactVectors(
       const result = await withRetry(
         () =>
           ai.models.embedContent({
-            model: 'gemini-embedding-2',
+            model: EMBED_MODEL,
             contents: [
               `Artifact filename: ${artifact.name}. ${chunk.text}`,
               {
@@ -208,7 +210,7 @@ export async function indexArtifactVectors(
         const result = await withRetry(
           () =>
             ai.models.embedContent({
-              model: 'gemini-embedding-2',
+              model: EMBED_MODEL,
               contents: slice.map((c) => `File: ${c.artifactName} (${c.lineRange ?? ''})\n${c.text}`),
             }),
           1
@@ -270,7 +272,7 @@ export async function searchSessionIndex(
       const res = await withRetry(
         () =>
           ai.models.embedContent({
-            model: 'gemini-embedding-2',
+            model: EMBED_MODEL,
             contents: [query],
           }),
         1
@@ -347,7 +349,7 @@ export function getSessionStateResponse(sandbox: SessionSandbox): SessionStateRe
       totalChunks: sandbox.vectors.length,
       totalVectors,
       embeddingDims: sandbox.embeddingDims,
-      embeddingModel: 'gemini-embedding-2',
+      embeddingModel: EMBED_MODEL,
     },
   };
 }

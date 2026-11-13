@@ -12,6 +12,10 @@
 
 *Transforming unstructured codebases, performance CSVs, architectural wireframes, and engineering specs into autonomous, production-ready technical remediation workflows.*
 
+<br/>
+
+<img src="public/assets/aistudio/Screenshot_2026-11-13_200430_5e6d2336.png" alt="OmniAgent UI Overview" width="900" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+
 ---
 </div>
 

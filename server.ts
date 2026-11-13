@@ -623,12 +623,15 @@ async function startServer() {
       }
       conversationContents.push({ role: 'user', parts: userParts });
 
+      const PRIMARY_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
+      const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL?.trim() || 'gemini-2.0-flash';
+
       const thinkingLevel =
         reasoningDepth === 'deep' ? ThinkingLevel.XHIGH : ThinkingLevel.HIGH;
 
       recordTraceAndSend({
         phase: 'REASONING',
-        title: `Invoking gemini-4-hydrogen (${reasoningDepth === 'deep' ? 'XHIGH' : 'HIGH'} reasoning)`,
+        title: `Invoking ${PRIMARY_MODEL} (${reasoningDepth === 'deep' ? 'XHIGH' : 'HIGH'} reasoning)`,
         detail: `Hybrid reasoning layer active with ${omniAgentToolDeclarations.length} agentic orchestration tools.`,
         status: 'completed',
       });
@@ -636,17 +639,17 @@ async function startServer() {
       // 3. Streaming + Multi-Step Function Calling Loop (max 4 tool rounds)
       const activeContents: Content[] = [...conversationContents];
       let emittedAnyText = false;
-      let activeModel: 'gemini-4-hydrogen' | 'gemini-3.1-flash-lite' = 'gemini-4-hydrogen';
+      let activeModel: string = PRIMARY_MODEL;
 
       const runStreamingRound = async (
-        modelName: 'gemini-4-hydrogen' | 'gemini-3.1-flash-lite'
+        modelName: string
       ): Promise<{
         collectedModelParts: Part[];
         collectedFunctionCalls: FunctionCall[];
         roundTextEmitted: boolean;
       }> => {
         const effectiveThinking =
-          modelName === 'gemini-4-hydrogen'
+          modelName === PRIMARY_MODEL
             ? thinkingLevel
             : ThinkingLevel.HIGH;
 
@@ -707,18 +710,18 @@ async function startServer() {
         try {
           roundResult = await runStreamingRound(activeModel);
         } catch (roundErr) {
+          const formatted = formatGeminiError(roundErr);
           if (
-            isRateLimitError(roundErr) &&
-            activeModel === 'gemini-4-hydrogen'
+            (isRateLimitError(roundErr) || formatted.kind === 'NOT_FOUND') &&
+            activeModel !== FALLBACK_MODEL
           ) {
-            activeModel = 'gemini-3.1-flash-lite';
             recordTraceAndSend({
               phase: 'REASONING',
-              title: 'Primary model rate-limited; failing over to gemini-3.1-flash-lite',
-              detail:
-                'gemini-4-hydrogen returned 429 RESOURCE_EXHAUSTED after backoff. Continuing synthesis on gemini-3.1-flash-lite.',
+              title: `Model rate-limited or unavailable; failing over to ${FALLBACK_MODEL}`,
+              detail: `${activeModel} returned ${formatted.code} (${formatted.kind}). Automatically failing over to ${FALLBACK_MODEL}.`,
               status: 'warning',
             });
+            activeModel = FALLBACK_MODEL;
             roundResult = await runStreamingRound(activeModel);
           } else {
             throw roundErr;
